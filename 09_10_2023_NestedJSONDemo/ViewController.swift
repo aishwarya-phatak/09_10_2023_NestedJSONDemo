@@ -9,10 +9,28 @@ import UIKit
 
 class ViewController: UIViewController {
 
+    @IBOutlet weak var productTableView: UITableView!
+    private let productTableViewCellIdentifier = "ProductTableViewCell"
+    private let productDetailsViewControllerIdentifier = "ProductDetailsViewController"
     var products : [Product] = []
+    var uiNib : UINib?
+    var productTableViewCell : ProductTableViewCell?
+    
     override func viewDidLoad() {
         super.viewDidLoad()
+        initializationOfTableView()
+        registerXIBWithTableView()
         jsonSerilization()
+    }
+    
+    func initializationOfTableView(){
+        productTableView.dataSource = self
+        productTableView.delegate = self
+    }
+    
+    func registerXIBWithTableView(){
+        uiNib = UINib(nibName: productTableViewCellIdentifier, bundle: nil)
+        self.productTableView.register(uiNib, forCellReuseIdentifier: productTableViewCellIdentifier)
     }
     
     func jsonSerilization(){
@@ -38,7 +56,7 @@ class ViewController: UIViewController {
                 let productCount = productRating["count"] as! Int
                 
                 //way 3- Rating structure nested withon product structure
-                let prRating = productDict["rating"] as! Rating
+                let prRating = productDict["rating"] as! [String:Any]
                 //object of Rating
                 let newRating = Rating(rate: productRate, count: productCount)
                 
@@ -66,10 +84,40 @@ class ViewController: UIViewController {
                     count: productCount)
                 self.products.append(newProductObject)
             }
+            DispatchQueue.main.async {
+                self.productTableView.reloadData()
+            }
         }
         dataTask.resume()
     }
-
-
 }
 
+extension ViewController : UITableViewDataSource{
+    func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
+        products.count
+    }
+    
+    func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
+        productTableViewCell = self.productTableView.dequeueReusableCell(withIdentifier: productTableViewCellIdentifier, for: indexPath) as? ProductTableViewCell
+        
+        productTableViewCell?.prIdLabel.text = String(products[indexPath.row].id)
+        productTableViewCell?.prRateLabel.text = String(products[indexPath.row].rate)
+        productTableViewCell?.prCountLabel.text = String(products[indexPath.row].count)
+        
+        return productTableViewCell!
+    }
+}
+
+extension ViewController : UITableViewDelegate{
+    func tableView(_ tableView: UITableView, heightForRowAt indexPath: IndexPath) -> CGFloat {
+        90.0
+    }
+    
+    func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
+        let prDetailsViewController = self.storyboard?.instantiateViewController(withIdentifier: productDetailsViewControllerIdentifier) as? ProductDetailsViewController
+        
+        prDetailsViewController?.productContainer = products[indexPath.row]
+        
+        self.navigationController?.pushViewController(prDetailsViewController!, animated: true)
+    }
+}
